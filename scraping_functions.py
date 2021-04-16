@@ -6,14 +6,8 @@ import os
 # GET HTML PAGE
 def get_soup(url):
     response_cat = requests.get(url)
-    soup = BeautifulSoup(response_cat.content, 'html.parser')
+    soup = BeautifulSoup(response_cat.content, 'html.parser')   # features="lxml" -> to avoid error
     return soup
-
-
-# GET URL OF 1 PRODUCT
-def get_url_prod(url_c):
-    url_prod = get_soup(url_c).find('h3').find('a')['href'].replace("../../..", "")
-    return f"http://books.toscrape.com/catalogue{url_prod}"
 
 
 # GET URLS OF ALL PRODUCTS FROM 1 CATEGORY PAGE ==> LIST
@@ -24,38 +18,35 @@ def get_urls_prods(url_c):
         url_prod = li.find('h3').find('a')['href'].replace("../../..", "")
         urls_prod_list.append(f"http://books.toscrape.com/catalogue{url_prod}")
         # print(f"http://books.toscrape.com/catalogue{url_prod}")
-
     return urls_prod_list
 
 
 # GET URLS OF ALL CATEGORIES FROM HOME PAGE --> LIST
 def get_urls_categories(url_h):
+    soup = get_soup(url_h)
     urls_all_cat_list = []
-    lis = get_soup(url_h).find('div', {'class': 'side_categories'}).findAll("li")
+    lis = soup.find('div', {'class': 'side_categories'}).findAll("li")
     for li in lis[1:]:
-        a = li.find("a")
-        url_category = a["href"]
+        url_category = li.find("a")["href"]
         urls_all_cat_list.append(f"http://books.toscrape.com/{url_category}")
-
-    # print(urls_all_cat_list)
     return urls_all_cat_list
 
 
-# GET ALL CATEGORIES ==> LIST
+# GET THE NAME OF ALL CATEGORIES  ==> LIST
 def get_category_list(url_h):
+    soup = get_soup(url_h)
     cat_list = []
-    lis = get_soup(url_h).find('div', {'class': 'side_categories'}).findAll("li")
+    lis = soup.find('div', {'class': 'side_categories'}).findAll("li")
     for li in (lis[1:]):
         cat = li.find("a").text.strip()
         cat_list.append(cat)
-
     return cat_list
 
 
 # GET INFOS OF 1 PRODUCT ==> DICT
 def get_prod_infos(url):
     soup = get_soup(url)
-    # product_page_url = url
+
     upc = soup.find('th', text='UPC').find_next_sibling('td').text
     title = soup.find('h1').text
     price_incl_tax = soup.find('th', text='Price (incl. tax)').find_next_sibling('td').text
@@ -89,16 +80,3 @@ def get_image(url_image, path):
     image_name = "/" + os.path.basename(url_image)
     with open(path + image_name, 'wb') as f:
         f.write(r.content)
-
-
-
-    # print("product_page_url : " + product_page_url)
-    # print("universal_product_code : " + upc)
-    # print("title : " + title)
-    # print("price_including_tax : " + price_incl_tax)
-    # print("price_excluding_tax : " + price_excl_tax)
-    # print("number_available : " + num_available)
-    # print("product_description : " + prod_descript)
-    # print("category : " + category)
-    # print("review_rating = " + review_rating)
-    # print("image_url : " + "http://books.toscrape.com/" + image_url)
