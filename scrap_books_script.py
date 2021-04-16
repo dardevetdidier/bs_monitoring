@@ -1,12 +1,11 @@
 import csv
-from scraping_functions import get_urls_categories, get_category_list, get_soup, get_urls_prods, get_prod_infos, \
-     get_image
+from scraping_functions import get_urls_categories, get_category_list, get_soup, get_urls_prods, \
+    loop_to_scrap_write_count
 import os
-
 
 url_home = "http://books.toscrape.com/"
 
-counter = 0
+counter = 0  # allows to count the number of products consulted
 
 # ================= CREATE DIRECTORY FOR SCRAPING ===================
 
@@ -18,8 +17,9 @@ print("All categories : \n")
 
 # ================== DISPLAY ALL CATEGORIES ==========================
 
-for index, value in enumerate(get_category_list(url_home)):
-    print(f"{index+1} - {value}")
+categories = get_category_list(url_home)
+for index, value in enumerate(categories):
+    print(f"{index + 1} - {value}")
 
 print()
 print("Ready to scrap")
@@ -32,6 +32,7 @@ url_cat = get_urls_categories(url_home)
 # ================ LOOP TO SCRAP ALL CATEGORIES =======================
 
 for index, url in enumerate(url_cat):
+    print(f"scraping {categories[index]} category - {index + 1}/{len(url_cat)}...")
 
     # ============= CREATE CATEGORY DIRECTORY ==========================
 
@@ -61,44 +62,32 @@ for index, url in enumerate(url_cat):
 
     # ================== NUMBER OF PAGES IN A CATEGORY =================
 
-    if not int(results) % 20 == 0:
-        pages = ((int(results) / 20) + 1)
-        pages = int(pages)
+    if not results % 20 == 0:  # if remainder != 0 -> products on next page (+1)
+        pages = int((results / 20) + 1)
+        # pages = int(pages)
+    else:
+        pages = int(results / 20)  # if remainder == 0 -> no products on next page
+        # pages = int(pages)
 
     # ================== IF JUST 1 PAGE TO SCRAP =======================
-    url_prod_list = get_urls_prods(url)
+
     if results <= 20:  # no pagination
-        for link in url_prod_list:
-            infos = get_prod_infos(link)
-            writer.writerow(infos)
-            counter += 1
-            get_image(infos.get('image_url'), path_im_dir)
-            # REMOVE # BELOW TO DISPLAY INFOS OF PRODUCTS (!! SLOWER !!)
-            # pprint.pprint(get_prod_infos(link), sort_dicts=False)
-            # print()
-            # print("=" * 50)
-            # print()
+        url_prod_list = get_urls_prods(url)
+        counter += loop_to_scrap_write_count(url_prod_list, writer, path_im_dir)
 
     # ======= IF MORE THAN ONE PAGE IN CATEGORY TO SCRAP ==> PAGINATION ========
 
     elif results > 20:
         while not page_nb > pages:
-            next_page = "page-" + str(page_nb)
+            next_page = "page-" + str(page_nb)  # modify url from the second page to increment it
             url_pag = url.replace('index', next_page)
             get_soup(url_pag)
             url_pag_list = get_urls_prods(url_pag)
-            for link in url_pag_list:
-                infos = get_prod_infos(link)
-                writer.writerow(infos)
-                counter += 1
-                get_image(infos.get('image_url'), path_im_dir)
-                # REMOVE # BELOW TO DISPLAY INFOS OF PRODUCTS (!! SLOWER !!)
-                # pprint.pprint(get_prod_infos(link), sort_dicts=False)
-                # print()
-                # print("=" * 50)
-                # print()
+
+            counter += loop_to_scrap_write_count(url_pag_list, writer, path_im_dir)
             page_nb += 1
 
     csv_file.close()
-print("Scrap completed")
+
+print(f"Scrap completed")
 print(f"Number of products  : {counter} ")

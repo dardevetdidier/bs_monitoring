@@ -3,26 +3,50 @@ from bs4 import BeautifulSoup
 import os
 
 
-# GET HTML PAGE
 def get_soup(url):
-    response_cat = requests.get(url)
-    soup = BeautifulSoup(response_cat.content, 'html.parser')   # features="lxml" -> to avoid error
+    """
+    Make a html request and get the html page.
+
+            Parameter:
+                url (str): An url string
+
+            Returns:
+                soup (bs4.BeautifulSoup) : html page
+    """
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
     return soup
 
 
-# GET URLS OF ALL PRODUCTS FROM 1 CATEGORY PAGE ==> LIST
 def get_urls_prods(url_c):
+    """
+    Get all url of all produscts from one page of a category
+
+            Parameter:
+                url_c (str): An url of the first page of a category
+
+            Returns:
+                urls_prod_list (list): A list of all url products from a category
+    """
     soup = get_soup(url_c)
     urls_prod_list = []
     for li in soup.find_all('li', {'class': 'col-xs-6 col-sm-4 col-md-3 col-lg-3'}):
         url_prod = li.find('h3').find('a')['href'].replace("../../..", "")
         urls_prod_list.append(f"http://books.toscrape.com/catalogue{url_prod}")
-        # print(f"http://books.toscrape.com/catalogue{url_prod}")
     return urls_prod_list
 
 
-# GET URLS OF ALL CATEGORIES FROM HOME PAGE --> LIST
 def get_urls_categories(url_h):
+    """
+    Get all url of all category from home page
+
+            Parameter:
+                url_h (str): url of home page
+
+            Returns:
+                urls_all_cat_list (list): T list of all url of each category
+
+    """
     soup = get_soup(url_h)
     urls_all_cat_list = []
     lis = soup.find('div', {'class': 'side_categories'}).findAll("li")
@@ -34,6 +58,15 @@ def get_urls_categories(url_h):
 
 # GET THE NAME OF ALL CATEGORIES  ==> LIST
 def get_category_list(url_h):
+    """
+    Get the names of all categories
+
+            Parameters:
+                url_h (str): url of home page
+
+            Returns:
+                cat_list (list): The list of the name of each category
+    """
     soup = get_soup(url_h)
     cat_list = []
     lis = soup.find('div', {'class': 'side_categories'}).findAll("li")
@@ -43,8 +76,18 @@ def get_category_list(url_h):
     return cat_list
 
 
-# GET INFOS OF 1 PRODUCT ==> DICT
 def get_prod_infos(url):
+    """
+    Get informations of one product
+
+            Parameters:
+                url (str): url of product page
+
+            Returns:
+                info_product (dict): A dictionary:
+                                            keys: names of informations (str)
+                                            values: datas (str)
+    """
     soup = get_soup(url)
 
     upc = soup.find('th', text='UPC').find_next_sibling('td').text
@@ -76,7 +119,40 @@ def get_prod_infos(url):
 
 
 def get_image(url_image, path):
+    """
+    Make a get resquest and download image from the page of a product
+
+            Parameters:
+                url_image (str): url of the image
+                path (str) : path where image is written
+
+    """
     r = requests.get(url_image)
     image_name = "/" + os.path.basename(url_image)
     with open(path + image_name, 'wb') as f:
         f.write(r.content)
+
+
+def loop_to_scrap_write_count(url_list, writer, path_im_dir):
+    """
+        1) Get informations for each product looping in each url of page product
+        2) write informations in a csv file
+        3) increment counter for counting number of products
+        4) download image of the product
+
+            Parameters:
+                url_list (list): List of all product in a page of a category
+                writer (_csv.writer): csv file that is created
+                path_im_dir (str): path where image is downloaded
+
+            Returns:
+                cout (int): The number of products viewed
+    """
+    count = 0
+    for link in url_list:
+        infos = get_prod_infos(link)
+        writer.writerow(infos)
+        count += 1
+        get_image(infos.get('image_url'), path_im_dir)
+
+    return count
